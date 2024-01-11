@@ -1,0 +1,62 @@
+﻿pool:
+  name: Azure Pipelines
+  demands:
+  - msbuild
+  - visualstudio
+
+variables:
+  Version: '1.0.4'
+  Authors: 'Hogwarts Dev'
+  Description: 'This package is a wrapper'
+  ReleaseNotes: 'Create a new package of a .net library and publish as nuget package in the artifacts feed under azure devops'
+  Tags: 'Dev'
+
+steps:
+
+- task: UseDotNet@2
+  displayName: '.NET Core 6.x'
+  inputs:
+    version: 6.x
+
+- task: NuGetToolInstaller@0
+  displayName: 'NuGet 6.8.x'
+  inputs:
+    versionSpec: 6.8.x
+
+- task: NuGetCommand@2
+  displayName: 'NuGet restore'
+  inputs:
+    restoreSolution: <.Net solution path from the repo> #replace with .Net solution path from the repo
+    vstsFeed: '<feed_key>' #Use packages from this Azure Artifacts/TFS feed
+
+- task: VSBuild@1
+  displayName: 'Build solution'
+  inputs:
+    solution: <.Net solution path from the repo> #replace with .Net solution path from the repo, Include the selected feed in the generated NuGet.config. You must have Azure Artifacts installed and licensed to select a feed here.
+    vsVersion: 17.0
+    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\"'
+    platform: '$(BuildPlatform)'
+    configuration: '$(BuildConfiguration)'
+    maximumCpuCount: true
+
+- task: NuGetCommand@2
+  displayName: 'NuGet pack'
+  inputs:
+    command: pack
+    packagesToPack: '**/<.Net solution>.csproj' #replace with .Net solution name
+    versioningScheme: byPrereleaseNumber
+    patchVersion: 2
+    buildProperties: 'Id=$(id);Version=$(Version);Authors=$(Authors);Desc=$(Description);ReleaseNotes=$(ReleaseNotes);Tags=$(Tags)'
+
+- task: NuGetCommand@2
+  displayName: 'NuGet push'
+  inputs:
+    command: push
+    publishVstsFeed: '<target_feed>' #Select a feed hosted in this account. You must have Azure Artifacts installed and licensed to select a feed here.
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish the Artifacts'
+  inputs:
+    PathtoPublish: '$(build.artifactstagingdirectory)'
+    ArtifactName: '$(Parameters.ArtifactName)'
+  condition: succeededOrFailed()
