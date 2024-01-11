@@ -1,6 +1,6 @@
 # CustomNugetPackage
 
-This project contains a yaml file that has the script to create the Azure ci pipeline which creates a custom Nuget package
+This project contains a yaml file that has the script to create the Azure ci pipeline which creates and publishes custom Nuget package
 
 Instructions:
 1. Login to Azure DevOps
